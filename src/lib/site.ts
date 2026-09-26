@@ -6,7 +6,11 @@ export const siteConfig = {
   description:
     "TechLogicQ helps graduates build industry-ready technical skills through practical training, projects, career-focused learning and technology services.",
   // TODO: replace with the production domain once it is live.
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.techlogicq.com",
+  url: function toSiteUrl(value: string | undefined) {
+  const raw = value?.trim().replace(/\/+$/, "");
+  if (!raw) return "https://www.techlogicq.com";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
   ogImage: "/og-image.jpg",
   contact: {
     email: "techlogicq@gmail.com",
