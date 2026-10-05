@@ -6,7 +6,7 @@
 //   - production env file at /etc/techlogicq/techlogicq.env (owned root:jenkins, mode 640)
 //   - systemd service "techlogicq" that runs /var/www/techlogicq/current on port 3000
 //   - sudoers rule letting jenkins run "systemctl restart techlogicq" without a password
-//   - Jenkins credential "github-techlogicq" (GitHub username + personal access token)
+//   - Jenkins credential "github-techlogicq" (SSH Username with private key; public key added as a GitHub deploy key)
 
 pipeline {
     agent any
@@ -23,7 +23,7 @@ pipeline {
     }
 
     environment {
-        REPO_URL      = 'https://github.com/gowrisankarv-work/TechLogicQ-Website.git'
+        REPO_URL      = 'git@github.com:gowrisankarv-work/TechLogicQ-Website.git'
         BRANCH        = 'main'
         APP_ROOT      = '/var/www/techlogicq'
         ENV_FILE      = '/etc/techlogicq/techlogicq.env'

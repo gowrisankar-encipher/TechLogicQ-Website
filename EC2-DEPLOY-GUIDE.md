@@ -261,12 +261,28 @@ Atlas → **Network Access** → Add IP Address → `<ELASTIC_IP>/32`. (If you k
    sudo cat /var/lib/jenkins/secrets/initialAdminPassword
    ```
 2. **Install suggested plugins** (includes Git, GitHub, Pipeline). Create your admin user. Set the Jenkins URL to `https://jenkins.techlogicq.in/`.
-3. **GitHub token**: GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained token** → Repository access: only `TechLogicQ-Website` → Permissions: **Contents: Read-only**. Copy it.
-4. Jenkins → Manage Jenkins → **Credentials** → System → Global → Add Credentials:
-   - Kind: **Username with password**
-   - Username: `gowrisankarv-work`
-   - Password: the token
+3. **SSH key for GitHub** (on the server). Create a key pair for the `jenkins` user and trust GitHub's host key:
+   ```bash
+   sudo -u jenkins mkdir -p /var/lib/jenkins/.ssh && sudo chmod 700 /var/lib/jenkins/.ssh
+   sudo -u jenkins ssh-keygen -t ed25519 -C "jenkins@techlogicq" -N "" -f /var/lib/jenkins/.ssh/id_ed25519
+   sudo -u jenkins bash -c 'ssh-keyscan -t ed25519,rsa github.com >> /var/lib/jenkins/.ssh/known_hosts'
+   sudo cat /var/lib/jenkins/.ssh/id_ed25519.pub   # public key -> GitHub
+   ```
+   GitHub → `TechLogicQ-Website` → Settings → **Deploy keys** → **Add deploy key** → Title `jenkins-ec2`, paste the public key, leave **Allow write access** unticked → Add key.
+
+   Test it (should say "Hi gowrisankarv-work/TechLogicQ-Website! You've successfully authenticated"):
+   ```bash
+   sudo -u jenkins ssh -T git@github.com
+   ```
+4. Add the private key to Jenkins. Print it with `sudo cat /var/lib/jenkins/.ssh/id_ed25519`, then Jenkins → Manage Jenkins → **Credentials** → System → Global → **Add Credentials**:
+   - Kind: **SSH Username with private key**
    - **ID: `github-techlogicq`** (the Jenkinsfile uses this exact ID)
+   - Username: `git`
+   - Private Key: **Enter directly** → Add → paste the whole key, including the `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END ...-----` lines
+   - Passphrase: leave empty
+   - Create.
+
+   Also check Manage Jenkins → **Security** → **Git Host Key Verification Configuration** is set to **Known hosts file** (the default). The `ssh-keyscan` above filled that file.
 5. **New Item** → name `techlogicq-website` → **Pipeline** → OK.
    - Under **Triggers**, tick **GitHub hook trigger for GITScm polling**.
    - Under **Pipeline**, Definition: **Pipeline script**, paste the whole `Jenkinsfile`. Leave "Use Groovy Sandbox" ticked.
@@ -327,4 +343,5 @@ If the health check fails, the post step switches `current` back to the previous
 - **Certbot fails**: DNS isn't pointing at the Elastic IP yet, or port 80 isn't open in the security group.
 - **Contact form doesn't send**: check `SMTP_PASS` is a Google App Password. Port 465 outbound works on EC2 (AWS only throttles port 25).
 - **Admin/careers errors**: Atlas Network Access doesn't include the Elastic IP.
+- **`Host key verification failed` or `Permission denied (publickey)` in Checkout**: rerun the `ssh-keyscan` line from Step 9.3, check `sudo -u jenkins ssh -T git@github.com` works, and that the credential's Username is `git` and ID is `github-techlogicq`.
 - **Webhook shows 403/404**: Payload URL must end in `/github-webhook/` and the job must have been built once.
